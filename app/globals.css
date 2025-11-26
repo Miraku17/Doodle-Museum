@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Font families - matching the original HTML config */
+  --font-family-doodle: "Gloria Hallelujah", cursive;
+  --font-family-hand: "Patrick Hand", cursive;
+
+  /* Custom colors */
+  --color-paper: #fdfbf7;
+  --color-pencil: #2d2d2d;
+
+  /* Background image */
+  --background-image-paper-pattern: url('https://www.transparenttextures.com/patterns/cream-paper.png');
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-pencil);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Ensure font classes work properly */
+  .font-doodle {
+    font-family: var(--font-doodle), "Gloria Hallelujah", cursive !important;
+  }
+
+  .font-hand {
+    font-family: var(--font-hand), "Patrick Hand", cursive !important;
+  }
+  
+  /* Custom scrollbar to match theme */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #888; 
+    border-radius: 5px;
+    border: 2px solid #f1f1f1;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; 
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Animation utilities */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  70% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
