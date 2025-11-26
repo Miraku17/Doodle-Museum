@@ -35,7 +35,7 @@ export default function UserHome() {
   // AI State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Load from local storage
+  // Load from local storage and fetch from API
   useEffect(() => {
     const storedPaintings = localStorage.getItem(STORAGE_KEY);
     if (storedPaintings) {
@@ -49,6 +49,23 @@ export default function UserHome() {
       const profile = JSON.parse(storedProfile);
       setCurrentUser(profile);
     }
+
+    // Fetch latest profile from server
+    const fetchProfile = async () => {
+        try {
+            const res = await fetch('/api/get-profile');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.profile) {
+                    setCurrentUser(prev => ({ ...prev, ...data.profile }));
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ ...JSON.parse(storedProfile || '{}'), ...data.profile }));
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch profile:", error);
+        }
+    };
+    fetchProfile();
   }, []);
 
   const savePaintingToStorage = (newPainting: Painting) => {
@@ -204,29 +221,12 @@ export default function UserHome() {
         <div className="md:col-span-3 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 rounded-sm">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="font-doodle text-3xl">📈 Trending Wall</h2>
-                <button onClick={() => setView('GALLERY')} className="font-hand font-bold hover:underline">View All →</button>
+                <button disabled className="font-hand font-bold opacity-50 cursor-not-allowed">View All →</button>
             </div>
             
-            {paintings.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                {paintings.slice(0, 6).map(painting => (
-                <div key={painting.id} className="group relative border-2 border-black bg-paper p-2 hover:-translate-y-1 transition-transform cursor-pointer" onClick={() => setView('GALLERY')}>
-                    <div className="aspect-square overflow-hidden mb-2 border border-stone-200 bg-white">
-                        <img src={painting.dataUrl} alt={painting.title} className="w-full h-full object-contain" />
-                    </div>
-                    <p className="font-hand text-xs font-bold truncate">{painting.title}</p>
-                    <p className="font-hand text-[10px] text-stone-500 truncate">by {painting.artist}</p>
-                    <div className="absolute top-0 right-0 bg-yellow-300 px-1.5 py-0.5 text-[10px] font-bold border-l-2 border-b-2 border-black">
-                    {painting.votes} ❤️
-                    </div>
-                </div>
-                ))}
-            </div>
-            ) : (
             <div className="text-center py-10 border-2 border-dashed border-stone-300 rounded">
-                <p className="font-hand text-stone-500">The wall is empty! Be the first to hang your art.</p>
+                <p className="font-hand text-xl font-bold text-stone-500">Coming Soon! ✨</p>
             </div>
-            )}
         </div>
 
       </div>
@@ -290,8 +290,6 @@ export default function UserHome() {
                 <button onClick={() => setView('PAINT')} className="font-hand font-bold hover:underline">+ Add Yours</button>
             </div>
             <Gallery 
-              paintings={paintings} 
-              onVote={handleVote} 
               onAddClick={() => setView('PAINT')}
             />
           </div>

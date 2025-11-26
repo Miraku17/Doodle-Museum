@@ -35,21 +35,32 @@ export default function ProfilePage() {
     joinedDate: Date.now()
   });
   const [paintings, setPaintings] = useState<Painting[]>([]);
+  const [stats, setStats] = useState({ totalArtworks: 0, totalVotes: 0, avgVotes: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load Profile
+    // Load Profile from Local Storage (Fast Load)
     const storedProfile = localStorage.getItem(USER_PROFILE_KEY);
     if (storedProfile) {
       setCurrentUser(JSON.parse(storedProfile));
     }
 
-    // Load Paintings
-    const storedPaintings = localStorage.getItem(STORAGE_KEY);
-    if (storedPaintings) {
-      setPaintings(JSON.parse(storedPaintings));
-    }
+    // Fetch User Data (Paintings & Stats) from API
+    const fetchData = async () => {
+        try {
+            const response = await fetch('/api/get-user-data');
+            if (response.ok) {
+                const data = await response.json();
+                setPaintings(data.paintings);
+                setStats(data.stats);
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+        }
+    };
+
+    fetchData();
   }, []);
 
   const handleSaveProfile = async (profile: { name: string; avatarUrl: string | null; bio?: string }) => {
@@ -83,12 +94,11 @@ export default function ProfilePage() {
     }
   };
 
-  // Filter paintings for current user (assuming simple name match for this demo)
-  const userPaintings = paintings.filter(p => p.artist === currentUser.name);
-
-  // Calculated Stats
-  const totalVotes = userPaintings.reduce((acc, curr) => acc + curr.votes, 0);
-  const avgVotes = userPaintings.length > 0 ? Math.round(totalVotes / userPaintings.length) : 0;
+  // User paintings are now directly fetched, so we use `paintings` directly
+  // But the API returns only user's paintings, so no need to filter if the API does it.
+  // However, `paintings` state variable is used. 
+  // NOTE: The API /api/get-user-data returns ONLY the user's paintings.
+  const userPaintings = paintings; 
 
   // Badges Logic (Simulated)
   const badges: Badge[] = [
@@ -97,7 +107,7 @@ export default function ProfilePage() {
         icon: <Palette size={24} />, 
         name: 'First Doodle', 
         description: 'Uploaded your first painting',
-        unlocked: userPaintings.length > 0 
+        unlocked: stats.totalArtworks > 0 
     },
     { 
         id: 'trending', 
@@ -111,14 +121,14 @@ export default function ProfilePage() {
         icon: <Trophy size={24} />, 
         name: 'Gallery Builder', 
         description: 'Uploaded 5 artworks',
-        unlocked: userPaintings.length >= 5
+        unlocked: stats.totalArtworks >= 5
     },
     { 
         id: 'star', 
         icon: <Star size={24} />, 
         name: 'Super Star', 
         description: 'Received 50 total votes',
-        unlocked: totalVotes >= 50
+        unlocked: stats.totalVotes >= 50
     }
   ];
 
@@ -203,9 +213,9 @@ export default function ProfilePage() {
         {/* 4. Stats Section (Moved up for better layout) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-                { label: 'Artworks', value: userPaintings.length, color: 'bg-blue-100' },
-                { label: 'Total Votes', value: totalVotes, color: 'bg-red-100' },
-                { label: 'Avg Votes', value: avgVotes, color: 'bg-green-100' },
+                { label: 'Artworks', value: stats.totalArtworks, color: 'bg-blue-100' },
+                { label: 'Total Votes', value: stats.totalVotes, color: 'bg-red-100' },
+                { label: 'Avg Votes', value: stats.avgVotes, color: 'bg-green-100' },
                 { label: 'Rank', value: '#42', color: 'bg-yellow-100' }, // Dummy rank
             ].map((stat, i) => (
                 <div key={i} className={`${stat.color} border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rotate-${(i % 2 === 0 ? 1 : -1)} transform transition-transform hover:scale-105`}>

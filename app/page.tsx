@@ -19,7 +19,6 @@ const STORAGE_KEY = 'doodle_museum_artworks';
 export default function App() {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>('HOME');
-  const [paintings, setPaintings] = useState<Painting[]>([]);
   
   // State for the "Save" modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +26,8 @@ export default function App() {
   const [artistName, setArtistName] = useState('');
   const [artTitle, setArtTitle] = useState('');
   const [artCritique, setArtCritique] = useState('');
-  
+  const [userDescription, setUserDescription] = useState(''); // Added userDescription
+
   // AI State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -37,25 +37,14 @@ export default function App() {
   
   // Load from local storage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setPaintings(JSON.parse(stored));
-    } else {
-        // Load initial dummy if empty
-        setPaintings([]); 
-    }
+    // No paintings loaded directly for the public page, Gallery will fetch its own.
   }, []);
-
-  const savePaintingToStorage = (newPainting: Painting) => {
-    const updated = [newPainting, ...paintings];
-    setPaintings(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
 
   const handleSaveRequest = (dataUrl: string) => {
     setCurrentImageData(dataUrl);
     setArtTitle('');
     setArtCritique('');
+    setUserDescription(''); // Reset description for new save
     setIsModalOpen(true);
   };
 
@@ -71,34 +60,30 @@ export default function App() {
 
   const confirmSave = () => {
     if (!currentImageData || !artistName || !artTitle) {
-      alert("Please provide both a name and a title!");
+      alert("Please provide Artist Name, Title, and image data!");
       return;
     }
 
+    // For public save, we'll just save to local storage as before, no Supabase yet
+    // In a real app, public users might be limited or prompted to sign up.
     const newPainting: Painting = {
       id: Date.now().toString(),
       dataUrl: currentImageData,
       title: artTitle,
       artist: artistName,
+      description: userDescription, // Include userDescription
       critique: artCritique || undefined,
       votes: 0,
       timestamp: Date.now()
     };
 
-    savePaintingToStorage(newPainting);
+    // Retrieve existing paintings or initialize empty array
+    const existingPaintings = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const updatedPaintings = [newPainting, ...existingPaintings];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedPaintings));
+
     setIsModalOpen(false);
     setView('GALLERY');
-  };
-
-  const handleVote = (id: string) => {
-    const updated = paintings.map(p => 
-      p.id === id ? { ...p, votes: p.votes + 1 } : p
-    );
-    // Sort by votes (descending) whenever a vote happens
-    updated.sort((a, b) => b.votes - a.votes);
-    
-    setPaintings(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   // New function for signup success
@@ -203,8 +188,6 @@ export default function App() {
                 <p className="font-hand text-stone-500">Vote for your favorites!</p>
             </div>
             <Gallery 
-              paintings={paintings} 
-              onVote={handleVote} 
               onAddClick={() => setView('PAINT')}
             />
           </div>
@@ -238,6 +221,16 @@ export default function App() {
                     value={artistName} 
                     onChange={(e) => setArtistName(e.target.value)} 
                     placeholder="e.g. Picasso Jr."
+                />
+             </div>
+
+             <div>
+                <label className="font-hand text-sm font-bold block mb-1">Description (Optional)</label>
+                <textarea 
+                    value={userDescription} 
+                    onChange={(e) => setUserDescription(e.target.value)} 
+                    placeholder="Tell us about your masterpiece..."
+                    className="font-hand text-xl border-b-2 border-black bg-transparent focus:outline-none focus:border-stone-500 px-2 py-1 placeholder-stone-400 w-full resize-none h-20"
                 />
              </div>
 
