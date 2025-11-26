@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Painting, ViewMode, AICritiqueResponse } from './types';
+import { Painting, ViewMode, AICritiqueResponse, UserProfile, USER_PROFILE_KEY } from './types';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Gallery } from './components/Gallery';
 import { DoodleButton, DoodleInput, Modal } from './components/UI';
@@ -113,9 +113,15 @@ export default function App() {
   };
 
   // New function for signup success
-  const handleSignupSuccess = (email: string) => {
-    // For now, we'll just log and then proceed to painting
-    console.log(`User ${email} signed up successfully (simulated).`);
+  const handleSignupSuccess = (email: string, artistName: string) => {
+    console.log(`User ${email} signed up successfully (simulated) as ${artistName}.`);
+    const newProfile: UserProfile = {
+      name: artistName,
+      avatarUrl: null,
+      bio: 'Just started doodling!',
+      joinedDate: Date.now(),
+    };
+    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(newProfile));
     setIsSignupModalOpen(false); // Close signup modal
     router.push('/home');
   };
@@ -123,6 +129,7 @@ export default function App() {
   const handleLoginSuccess = (email: string) => {
     console.log(`User ${email} logged in successfully (simulated).`);
     setIsLoginModalOpen(false);
+    // On login, we don't get artistName from modal, assume profile will be loaded from localStorage on /home
     router.push('/home');
   };
 

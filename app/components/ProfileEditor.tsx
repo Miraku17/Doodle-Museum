@@ -38,7 +38,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ onSave, initialPro
              <DrawingCanvas 
                 onSave={handleAvatarSave}
                 // We don't need AI analysis for avatar creation usually
-                onAnalyzeRequest={() => {}} 
+                onAnalyzeRequest={async () => {}} 
                 isAnalyzing={false}
                 canvasWidth={300}
                 canvasHeight={300}

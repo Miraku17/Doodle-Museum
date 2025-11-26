@@ -14,3 +14,12 @@ export interface AICritiqueResponse {
   title: string;
   critique: string;
 }
+
+export interface UserProfile {
+  name: string;
+  avatarUrl: string | null;
+  bio?: string;
+  joinedDate?: number;
+}
+
+export const USER_PROFILE_KEY = 'doodle_museum_user_profile';

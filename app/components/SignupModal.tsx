@@ -4,21 +4,23 @@ import { Modal, DoodleInput, DoodleButton } from './UI';
 interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSignupSuccess: (email: string) => void;
+  onSignupSuccess: (email: string, artistName: string) => void;
   onLoginClick: () => void;
 }
 
 export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSignupSuccess, onLoginClick }) => {
   const [email, setEmail] = useState('');
+  const [artistName, setArtistName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setError(''); // Clear previous errors
 
-    if (!email || !password || !confirmPassword) {
+    if (!email || !artistName || !password || !confirmPassword) {
       setError('All fields are required.');
       return;
     }
@@ -39,19 +41,42 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSig
       return;
     }
 
-    // For now, simulate success. In a real app, you'd call an API here.
-    console.log('Signup successful (simulated):', { email });
-    onSignupSuccess(email);
-    // Reset form fields
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    onClose();
+    setLoading(true);
+    try {
+      const response = await fetch('/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, artistName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Signup failed');
+      } else {
+        console.log('Signup successful:', data);
+        onSignupSuccess(email, artistName);
+        // Reset form fields
+        setEmail('');
+        setArtistName('');
+        setPassword('');
+        setConfirmPassword('');
+        onClose();
+      }
+    } catch (err) {
+      setError('An unexpected error occurred.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
     setError('');
     setEmail('');
+    setArtistName('');
     setPassword('');
     setConfirmPassword('');
     onClose();
@@ -71,6 +96,16 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSig
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
+          />
+        </div>
+
+        <div>
+          <label className="font-hand text-sm font-bold block mb-1">Artist Name</label>
+          <DoodleInput 
+            type="text"
+            value={artistName}
+            onChange={(e) => setArtistName(e.target.value)}
+            placeholder="Your stage name"
           />
         </div>
 
@@ -112,8 +147,8 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSig
           </div>
         </div>
 
-        <DoodleButton onClick={handleSignup} className="w-full mt-4 justify-center">
-          Sign Up
+        <DoodleButton onClick={handleSignup} disabled={loading} className="w-full mt-4 justify-center disabled:opacity-50">
+          {loading ? 'Signing up...' : 'Sign Up'}
         </DoodleButton>
 
         <div className="text-center font-hand text-sm mt-2">
