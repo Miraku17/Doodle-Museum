@@ -36,6 +36,7 @@ export default function ProfilePage() {
   });
   const [paintings, setPaintings] = useState<Painting[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Load Profile
@@ -51,11 +52,35 @@ export default function ProfilePage() {
     }
   }, []);
 
-  const handleSaveProfile = (profile: { name: string; avatarUrl: string | null }) => {
-    const updatedProfile = { ...currentUser, ...profile };
-    setCurrentUser(updatedProfile);
-    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(updatedProfile));
-    setIsEditing(false);
+  const handleSaveProfile = async (profile: { name: string; avatarUrl: string | null; bio?: string }) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profile),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`Failed to update profile: ${data.error}`);
+        console.error('Profile Update Error:', data.error);
+        return;
+      }
+
+      const updatedProfile = { ...currentUser, ...data.profile };
+      setCurrentUser(updatedProfile);
+      localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(updatedProfile));
+      setIsEditing(false);
+    } catch (error) {
+      alert("An unexpected error occurred while updating profile.");
+      console.error("Client-side profile update error:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Filter paintings for current user (assuming simple name match for this demo)
@@ -104,6 +129,7 @@ export default function ProfilePage() {
             initialProfile={currentUser}
             onSave={handleSaveProfile}
             onCancel={() => setIsEditing(false)}
+            isSaving={isSaving}
          />
       </div>
     );
@@ -120,7 +146,24 @@ export default function ProfilePage() {
         >
           <ArrowLeft size={20} /> Back to Museum
         </button>
-        <DoodleButton variant="danger" onClick={() => router.push('/')} className="px-4 py-1 text-sm">
+        <DoodleButton variant="danger" onClick={async () => {
+          try {
+            const response = await fetch('/auth/logout', { method: 'POST' });
+            if (!response.ok) {
+              const errorData = await response.json();
+              console.error('Logout API error:', errorData.error);
+              alert('Logout failed. Please try again.');
+              return;
+            }
+            // Clear local storage items that are user-specific
+            localStorage.removeItem(USER_PROFILE_KEY);
+            localStorage.removeItem(STORAGE_KEY); // Assuming this is also user-specific in a real app
+            router.push('/');
+          } catch (error) {
+            console.error('Error during logout:', error);
+            alert('An unexpected error occurred during logout.');
+          }
+        }} className="px-4 py-1 text-sm">
            <LogOut size={16} className="inline mr-1" /> Logout
         </DoodleButton>
       </nav>
@@ -173,22 +216,11 @@ export default function ProfilePage() {
         </div>
 
         {/* 3. Achievements / Badges */}
-        <div className="bg-white/50 border-2 border-dashed border-black p-6 rounded-sm">
-            <h2 className="font-doodle text-2xl mb-6 flex items-center gap-2">
+        <div className="bg-white/50 border-2 border-dashed border-black p-6 rounded-sm text-center">
+            <h2 className="font-doodle text-2xl mb-6 flex items-center gap-2 justify-center">
                 <Medal className="text-yellow-500" /> Sticker Book (Achievements)
             </h2>
-            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                {badges.map(badge => (
-                    <div 
-                        key={badge.id} 
-                        className={`w-24 h-24 flex flex-col items-center justify-center p-2 border-2 rounded-full text-center transition-all ${badge.unlocked ? 'bg-white border-black shadow-md opacity-100' : 'bg-stone-200 border-stone-400 opacity-50 grayscale'}`}
-                        title={badge.description}
-                    >
-                        <div className="mb-1">{badge.icon}</div>
-                        <p className="font-hand text-[10px] font-bold leading-tight">{badge.name}</p>
-                    </div>
-                ))}
-            </div>
+            <p className="font-hand text-xl font-bold text-stone-500">Coming Soon! 🏆</p>
         </div>
 
         {/* 2. Your Paintings Section */}

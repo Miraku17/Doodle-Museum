@@ -3,6 +3,7 @@ export interface Painting {
   dataUrl: string; // Base64 image
   title: string;
   artist: string;
+  description?: string;
   critique?: string; // AI generated critique
   votes: number;
   timestamp: number;

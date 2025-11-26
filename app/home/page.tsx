@@ -13,18 +13,6 @@ import { Palette, GalleryVerticalEnd, LogOut, User } from 'lucide-react';
 const STORAGE_KEY = 'doodle_museum_artworks';
 const USER_PROFILE_KEY = 'doodle_museum_user_profile';
 
-const INITIAL_PAINTINGS: Painting[] = [
-  {
-    id: '1',
-    dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-    title: 'The Invisible Dot',
-    artist: 'Minimalist Mike',
-    votes: 5,
-    timestamp: Date.now(),
-    critique: "A bold statement on the futility of existence, or perhaps just a speck of dirt on the lens."
-  }
-];
-
 interface UserProfile {
   name: string;
   avatarUrl: string | null;
@@ -41,6 +29,7 @@ export default function UserHome() {
   const [currentImageData, setCurrentImageData] = useState<string | null>(null);
   const [artTitle, setArtTitle] = useState('');
   const [artCritique, setArtCritique] = useState('');
+  const [userDescription, setUserDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false); // New state for save loading
 
   // AI State
@@ -52,7 +41,7 @@ export default function UserHome() {
     if (storedPaintings) {
       setPaintings(JSON.parse(storedPaintings));
     } else {
-        setPaintings(INITIAL_PAINTINGS); 
+        setPaintings([]); 
     }
 
     const storedProfile = localStorage.getItem(USER_PROFILE_KEY);
@@ -72,6 +61,7 @@ export default function UserHome() {
     setCurrentImageData(dataUrl);
     setArtTitle('');
     setArtCritique('');
+    setUserDescription('');
     setIsModalOpen(true);
   };
 
@@ -94,6 +84,7 @@ export default function UserHome() {
     setIsSaving(true);
     const formData = new FormData();
     formData.append('title', artTitle);
+    formData.append('description', userDescription);
     formData.append('critique', artCritique || '');
     formData.append('file', currentImageData); // currentImageData is base64 string
 
@@ -117,6 +108,7 @@ export default function UserHome() {
         dataUrl: data.image_url, // Use the public URL from Supabase
         title: artTitle,
         artist: currentUser.name,
+        description: userDescription,
         critique: artCritique || undefined,
         votes: 0,
         timestamp: Date.now()
@@ -143,8 +135,27 @@ export default function UserHome() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const handleLogout = () => {
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Logout API error:', errorData.error);
+        alert('Logout failed. Please try again.');
+        return;
+      }
+      // Clear local storage items that are user-specific
+      localStorage.removeItem(USER_PROFILE_KEY);
+      localStorage.removeItem(STORAGE_KEY); // Assuming this is also user-specific in a real app
+
+      router.push('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      alert('An unexpected error occurred during logout.');
+    }
   };
 
   const handleSaveProfile = (profile: UserProfile) => {
@@ -305,6 +316,16 @@ export default function UserHome() {
                     value={artTitle} 
                     onChange={(e) => setArtTitle(e.target.value)} 
                     placeholder="e.g. The Angry Line"
+                />
+             </div>
+
+             <div>
+                <label className="font-hand text-sm font-bold block mb-1">Description (Optional)</label>
+                <textarea 
+                    value={userDescription} 
+                    onChange={(e) => setUserDescription(e.target.value)} 
+                    placeholder="Tell us about your masterpiece..."
+                    className="font-hand text-xl border-b-2 border-black bg-transparent focus:outline-none focus:border-stone-500 px-2 py-1 placeholder-stone-400 w-full resize-none h-20"
                 />
              </div>
 

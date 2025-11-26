@@ -16,28 +16,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Parse FormData
-  const body = await req.formData();
-  const title = body.get("title") as string;
-  const artCritique = body.get("critique") as string; // optional
-  const imageDataUrl = body.get("file") as string; // base64 Data URL from canvas
+  const body = await req.formData(); // for multipart/form-data
 
-  if (!title || !imageDataUrl) {
+  const title = body.get("title") as string;
+  const userDescription = body.get("description") as string;
+  const artCritique = body.get("critique") as string; // Changed 'description' to 'critique' to match project's terminology
+  const imageDataUrl = body.get("file") as string; // This will be the base64 data URL
+
+  if (!imageDataUrl || !title) {
     return NextResponse.json({ error: "Missing title or image data" }, { status: 400 });
   }
 
   try {
-    // Convert base64 Data URL to Blob
+    // Convert base64 Data URL to Blob for upload
     const base64Response = await fetch(imageDataUrl);
     const blob = await base64Response.blob();
-
-    // Generate unique file path
+    
+    // Upload to Supabase Storage
     const timestamp = Date.now();
     const filePath = `paintings/${user.id}/${timestamp}.png`;
 
-    // Upload to Supabase Storage 'artworks' bucket
     const { error: uploadError } = await supabase.storage
-      .from("artworks") // <-- your bucket
+      .from("paintings") // Assuming a bucket named 'paintings' exists
       .upload(filePath, blob, {
         cacheControl: '3600',
         upsert: false,
@@ -50,14 +50,15 @@ export async function POST(req: Request) {
     }
 
     // Get public URL
-    const { data: publicUrlData } = supabase.storage.from("artworks").getPublicUrl(filePath);
+    const { data: publicUrlData } = supabase.storage.from("paintings").getPublicUrl(filePath);
     const publicUrl = publicUrlData.publicUrl;
 
-    // Insert doodle record in 'doodles' table
+    // Insert into doodles table
     const { error: insertError } = await supabase.from("doodles").insert({
       user_id: user.id,
       title,
-      description: artCritique,
+      description: userDescription,
+      critique: artCritique, 
       image_url: publicUrl,
     });
 

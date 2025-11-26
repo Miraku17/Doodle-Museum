@@ -6,16 +6,19 @@ import { User } from 'lucide-react';
 interface UserProfile {
   name: string;
   avatarUrl: string | null;
+  bio?: string;
 }
 
 interface ProfileEditorProps {
   onSave: (profile: UserProfile) => void;
   initialProfile?: UserProfile;
   onCancel: () => void;
+  isSaving?: boolean;
 }
 
-export const ProfileEditor: React.FC<ProfileEditorProps> = ({ onSave, initialProfile, onCancel }) => {
+export const ProfileEditor: React.FC<ProfileEditorProps> = ({ onSave, initialProfile, onCancel, isSaving = false }) => {
   const [name, setName] = useState(initialProfile?.name || 'Anonymous Artist');
+  const [bio, setBio] = useState(initialProfile?.bio || '');
   const [isDrawingAvatar, setIsDrawingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialProfile?.avatarUrl || null);
   
@@ -25,7 +28,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ onSave, initialPro
   };
 
   const handleSaveProfile = () => {
-    onSave({ name, avatarUrl });
+    onSave({ name, avatarUrl, bio });
   };
 
   if (isDrawingAvatar) {
@@ -82,12 +85,22 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ onSave, initialPro
         />
       </div>
 
+      <div>
+        <label className="font-hand text-sm font-bold block mb-1">Bio</label>
+        <textarea 
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Tell us about yourself..."
+          className="font-hand text-xl border-b-2 border-black bg-transparent focus:outline-none focus:border-stone-500 px-2 py-1 placeholder-stone-400 w-full resize-none h-24"
+        />
+      </div>
+
       <div className="flex gap-4 mt-4">
-        <DoodleButton variant="secondary" onClick={onCancel} className="flex-1 justify-center">
+        <DoodleButton variant="secondary" onClick={onCancel} disabled={isSaving} className="flex-1 justify-center disabled:opacity-50">
           Cancel
         </DoodleButton>
-        <DoodleButton onClick={handleSaveProfile} className="flex-1 justify-center">
-          Save Profile
+        <DoodleButton onClick={handleSaveProfile} disabled={isSaving} className="flex-1 justify-center disabled:opacity-50">
+          {isSaving ? 'Saving...' : 'Save Profile'}
         </DoodleButton>
       </div>
     </div>

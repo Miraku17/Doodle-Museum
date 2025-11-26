@@ -15,17 +15,6 @@ import { Palette, GalleryVerticalEnd } from 'lucide-react';
 const STORAGE_KEY = 'doodle_museum_artworks';
 
 // Dummy initial data
-const INITIAL_PAINTINGS: Painting[] = [
-  {
-    id: '1',
-    dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', // 1x1 pixel placeholder logic handled in component usually, but keeping valid string
-    title: 'The Invisible Dot',
-    artist: 'Minimalist Mike',
-    votes: 5,
-    timestamp: Date.now(),
-    critique: "A bold statement on the futility of existence, or perhaps just a speck of dirt on the lens."
-  }
-];
 
 export default function App() {
   const router = useRouter();
@@ -53,7 +42,7 @@ export default function App() {
       setPaintings(JSON.parse(stored));
     } else {
         // Load initial dummy if empty
-        setPaintings(INITIAL_PAINTINGS); 
+        setPaintings([]); 
     }
   }, []);
 
