@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const filePath = `paintings/${user.id}/${timestamp}.png`;
 
     const { error: uploadError } = await supabase.storage
-      .from("paintings") // Assuming a bucket named 'paintings' exists
+      .from("artworks") // Using the artworks bucket with paintings folder
       .upload(filePath, blob, {
         cacheControl: '3600',
         upsert: false,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     }
 
     // Get public URL
-    const { data: publicUrlData } = supabase.storage.from("paintings").getPublicUrl(filePath);
+    const { data: publicUrlData } = supabase.storage.from("artworks").getPublicUrl(filePath);
     const publicUrl = publicUrlData.publicUrl;
 
     // Insert into doodles table
@@ -58,7 +58,6 @@ export async function POST(req: Request) {
       user_id: user.id,
       title,
       description: userDescription,
-      critique: artCritique, 
       image_url: publicUrl,
     });
 

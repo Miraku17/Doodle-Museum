@@ -7,25 +7,21 @@ export async function GET(req: Request) {
   const supabase = await createClient();
 
   try {
-    // Fetch all doodles and join with profiles to get artist_name
+    // Fetch all doodles and optionally join profiles
     const { data: doodles, error: doodlesError } = await supabase
-      .from("doodles")
-      .select(
-        `
-        id,
-        title,
-        description,
-        image_url,
-        votes_count,
-        created_at,
-        profiles (
-          artist_name,
-              avatar_url
-
-        )
-      `
-      )
-      .order("created_at", { ascending: false }); // Order by newest first
+      .from('doodles')
+      .select(`
+    id,
+    title,
+    description,
+    image_url,
+    votes_count,
+    created_at,
+    profiles:user_id (
+      artist_name
+    )
+  `)
+      .order("created_at", { ascending: false });
 
     if (doodlesError) {
       console.error("Error fetching all doodles:", doodlesError);
@@ -36,15 +32,18 @@ export async function GET(req: Request) {
     }
 
     // Map to frontend Painting type
-    const paintings = doodles.map((doodle) => ({
-      id: doodle.id,
-      dataUrl: doodle.image_url,
-      title: doodle.title,
-      artist: Array.isArray(doodle.profiles) && doodle.profiles[0] ? doodle.profiles[0].artist_name : "Unknown Artist",
-      votes: doodle.votes_count || 0,
-      timestamp: new Date(doodle.created_at).getTime(),
-      description: doodle.description,
-    }));
+    const paintings = doodles.map((doodle) => {
+      const profile = Array.isArray(doodle.profiles) ? doodle.profiles[0] : doodle.profiles;
+      return {
+        id: doodle.id,
+        dataUrl: doodle.image_url,
+        title: doodle.title,
+        artist: profile?.artist_name || "Unknown Artist",
+        votes: doodle.votes_count || 0,
+        timestamp: new Date(doodle.created_at).getTime(),
+        description: doodle.description,
+      };
+    });
 
     return NextResponse.json({ paintings });
   } catch (err) {
