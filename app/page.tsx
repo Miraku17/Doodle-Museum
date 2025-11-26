@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Painting, ViewMode, AICritiqueResponse } from './types';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Gallery } from './components/Gallery';
 import { DoodleButton, DoodleInput, Modal } from './components/UI';
+import { SignupModal } from './components/SignupModal'; // New import
+import { LoginModal } from './components/LoginModal';
+import { HeroDoodles } from './components/HeroDoodles';
 import { analyzeDoodle } from './services/geminiService';
 import { Palette, GalleryVerticalEnd } from 'lucide-react';
 
@@ -24,6 +28,7 @@ const INITIAL_PAINTINGS: Painting[] = [
 ];
 
 export default function App() {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>('HOME');
   const [paintings, setPaintings] = useState<Painting[]>([]);
   
@@ -37,6 +42,10 @@ export default function App() {
   // AI State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // New state for signup modal
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
   // Load from local storage
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -103,21 +112,46 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
+  // New function for signup success
+  const handleSignupSuccess = (email: string) => {
+    // For now, we'll just log and then proceed to painting
+    console.log(`User ${email} signed up successfully (simulated).`);
+    setIsSignupModalOpen(false); // Close signup modal
+    router.push('/home');
+  };
+
+  const handleLoginSuccess = (email: string) => {
+    console.log(`User ${email} logged in successfully (simulated).`);
+    setIsLoginModalOpen(false);
+    router.push('/home');
+  };
+
+  const openLoginFromSignup = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  const openSignupFromLogin = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
   // --- Views ---
 
   const renderHome = () => (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center gap-8 animate-fade-in p-4">
-      <h1 className="font-doodle text-5xl md:text-7xl mb-4 relative inline-block">
+    <div className="relative flex flex-col items-center justify-center min-h-[80vh] text-center gap-8 animate-fade-in p-4 overflow-hidden">
+      <HeroDoodles />
+      <h1 className="font-doodle text-5xl md:text-7xl mb-4 relative inline-block z-10">
         Doodle Museum
         <span className="absolute -top-6 -right-6 text-4xl rotate-12">✏️</span>
       </h1>
-      <p className="font-hand text-xl md:text-2xl max-w-lg text-stone-600">
+      <p className="font-hand text-xl md:text-2xl max-w-lg text-stone-600 z-10">
         Welcome to the most prestigious gallery of scribbles on the internet. 
         Paint a masterpiece, get roasted by our AI critic, and hang it on the wall.
       </p>
       
-      <div className="flex gap-6 mt-8">
-        <DoodleButton onClick={() => setView('PAINT')} className="text-xl px-8 py-4">
+      <div className="flex gap-6 mt-8 z-10">
+        <DoodleButton onClick={() => setIsSignupModalOpen(true)} className="text-xl px-8 py-4">
           Start Painting
         </DoodleButton>
         <DoodleButton variant="secondary" onClick={() => setView('GALLERY')} className="text-xl px-8 py-4">
@@ -224,6 +258,22 @@ export default function App() {
           </DoodleButton>
         </div>
       </Modal>
+
+      {/* Signup Modal */}
+      <SignupModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)} 
+        onSignupSuccess={handleSignupSuccess}
+        onLoginClick={openLoginFromSignup}
+      />
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onSignupClick={openSignupFromLogin}
+      />
 
     </div>
   );

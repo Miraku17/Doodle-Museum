@@ -6,9 +6,10 @@ interface DrawingCanvasProps {
   onSave: (dataUrl: string) => void;
   onAnalyzeRequest: (dataUrl: string) => Promise<void>;
   isAnalyzing: boolean;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
-const CANVAS_SIZE = 320;
 const COLORS = [
   '#2d2d2d', // Charcoal
   '#dc2626', // Red
@@ -21,7 +22,7 @@ const COLORS = [
   '#57534e', // Stone
 ];
 
-export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeRequest, isAnalyzing }) => {
+export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeRequest, isAnalyzing, canvasWidth = 400, canvasHeight = 400 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [tool, setTool] = useState<'pencil' | 'eraser'>('pencil');
@@ -41,15 +42,15 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeR
 
     // Set white background initially
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     // Save initial blank state
-    const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
     setHistory([imageData]);
     setHistoryStep(0);
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
@@ -89,7 +90,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeR
         ctx?.beginPath(); // Reset path
         
         // Save State
-        const imageData = ctx?.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        const imageData = ctx?.getImageData(0, 0, canvasWidth, canvasHeight);
         if (imageData) {
             const newHistory = history.slice(0, historyStep + 1);
             newHistory.push(imageData);
@@ -152,10 +153,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeR
     if (!ctx) return;
     
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
     // Save state after clear
-    const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
     const newHistory = history.slice(0, historyStep + 1);
     newHistory.push(imageData);
     setHistory(newHistory);
@@ -249,8 +250,8 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeR
       <div className="relative p-2 bg-white border-4 border-stone-800 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.8)] transform rotate-1">
         <canvas
           ref={canvasRef}
-          width={CANVAS_SIZE}
-          height={CANVAS_SIZE}
+          width={canvasWidth}
+          height={canvasHeight}
           onMouseDown={startDrawing}
           onMouseMove={handleMouseMove}
           onMouseUp={stopDrawing}
