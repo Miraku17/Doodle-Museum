@@ -10,7 +10,9 @@ import { SignupModal } from './components/SignupModal'; // New import
 import { LoginModal } from './components/LoginModal';
 import { HeroDoodles } from './components/HeroDoodles';
 import { analyzeDoodle } from './services/geminiService';
-import { Palette, GalleryVerticalEnd } from 'lucide-react';
+import { Palette, GalleryVerticalEnd, LogIn } from 'lucide-react';
+import { createBrowserClient } from '@supabase/ssr'; // Import Supabase client
+import { User } from '@supabase/supabase-js'; // Import User type from supabase-js
 
 const STORAGE_KEY = 'doodle_museum_artworks';
 
@@ -20,6 +22,10 @@ export default function App() {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>('HOME');
   
+  // Supabase states
+  const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+
   // State for the "Save" modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageData, setCurrentImageData] = useState<string | null>(null);
@@ -35,9 +41,29 @@ export default function App() {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   
-  // Load from local storage
+  // Load from local storage and Supabase Auth
   useEffect(() => {
-    // No paintings loaded directly for the public page, Gallery will fetch its own.
+    // Gallery will fetch its own paintings.
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    setSupabaseClient(supabase);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   const handleSaveRequest = (dataUrl: string) => {
@@ -86,6 +112,14 @@ export default function App() {
     setView('GALLERY');
   };
 
+  const handlePaintClick = () => {
+    if (user) {
+      setView('PAINT');
+    } else {
+      setIsSignupModalOpen(true);
+    }
+  };
+
   // New function for signup success
   const handleSignupSuccess = (email: string, artistName: string) => {
     console.log(`User ${email} signed up successfully (simulated) as ${artistName}.`);
@@ -132,7 +166,7 @@ export default function App() {
       </p>
       
       <div className="flex gap-6 mt-8 z-10">
-        <DoodleButton onClick={() => setIsSignupModalOpen(true)} className="text-xl px-8 py-4">
+        <DoodleButton onClick={handlePaintClick} className="text-xl px-8 py-4">
           Start Painting
         </DoodleButton>
         <DoodleButton variant="secondary" onClick={() => setView('GALLERY')} className="text-xl px-8 py-4">
@@ -155,7 +189,7 @@ export default function App() {
         </div>
         <div className="flex gap-4">
             {view !== 'PAINT' && (
-                 <button onClick={() => setView('PAINT')} className="flex items-center gap-2 font-hand hover:underline">
+                 <button onClick={handlePaintClick} className="flex items-center gap-2 font-hand hover:underline">
                     <Palette size={18} /> Paint
                  </button>
             )}
@@ -164,6 +198,9 @@ export default function App() {
                     <GalleryVerticalEnd size={18} /> Gallery
                  </button>
             )}
+            <button onClick={() => setIsLoginModalOpen(true)} className="flex items-center gap-2 font-hand hover:text-stone-600 transition-colors">
+                <LogIn size={18} /> Log In
+            </button>
         </div>
       </nav>
 
@@ -188,7 +225,7 @@ export default function App() {
                 <p className="font-hand text-stone-500">Vote for your favorites!</p>
             </div>
             <Gallery 
-              onAddClick={() => setView('PAINT')}
+              onAddClick={handlePaintClick}
             />
           </div>
         )}
