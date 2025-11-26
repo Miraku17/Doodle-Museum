@@ -13,8 +13,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError('');
 
     if (!email || !password) {
@@ -22,12 +23,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       return;
     }
 
-    // Simulate login
-    console.log('Login successful (simulated):', { email });
-    onLoginSuccess(email);
-    setEmail('');
-    setPassword('');
-    onClose();
+    setLoading(true);
+    try {
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed');
+      } else {
+        console.log('Login successful:', data);
+        onLoginSuccess(email); // onLoginSuccess currently just takes email
+        setEmail('');
+        setPassword('');
+        onClose();
+      }
+    } catch (err) {
+      setError('An unexpected error occurred.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -73,8 +95,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           </div>
         </div>
 
-        <DoodleButton onClick={handleLogin} className="w-full mt-2 justify-center">
-          Log In
+        <DoodleButton onClick={handleLogin} disabled={loading} className="w-full mt-2 justify-center disabled:opacity-50">
+          {loading ? 'Logging in...' : 'Log In'}
         </DoodleButton>
 
         <div className="text-center font-hand text-sm mt-2">

@@ -270,12 +270,12 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onSave, onAnalyzeR
       <div className="flex gap-4 w-full justify-center max-w-[320px]">
         <DoodleButton 
             variant="secondary" 
-            onClick={handleAnalyze} 
-            disabled={isAnalyzing}
-            className="flex items-center gap-2 flex-1 justify-center"
+            onClick={() => { /* Coming soon */ }} 
+            disabled={true}
+            className="flex items-center gap-2 flex-1 justify-center opacity-50 cursor-not-allowed"
         >
           <Wand2 size={18} />
-          {isAnalyzing ? 'Thinking...' : 'AI Name'}
+          Coming Soon
         </DoodleButton>
 
         <DoodleButton 

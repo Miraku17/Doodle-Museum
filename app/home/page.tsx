@@ -39,10 +39,10 @@ export default function UserHome() {
   // State for the "Save" modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageData, setCurrentImageData] = useState<string | null>(null);
-  const [artistName, setArtistName] = useState('');
   const [artTitle, setArtTitle] = useState('');
   const [artCritique, setArtCritique] = useState('');
-  
+  const [isSaving, setIsSaving] = useState(false); // New state for save loading
+
   // AI State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -59,7 +59,6 @@ export default function UserHome() {
     if (storedProfile) {
       const profile = JSON.parse(storedProfile);
       setCurrentUser(profile);
-      setArtistName(profile.name); // Auto-fill artist name
     }
   }, []);
 
@@ -73,10 +72,6 @@ export default function UserHome() {
     setCurrentImageData(dataUrl);
     setArtTitle('');
     setArtCritique('');
-    // Pre-fill artist name from profile if available, else keep default or previous input
-    if (currentUser.name && currentUser.name !== 'Artist') {
-        setArtistName(currentUser.name);
-    }
     setIsModalOpen(true);
   };
 
@@ -86,33 +81,57 @@ export default function UserHome() {
     setArtTitle(result.title);
     setArtCritique(result.critique);
     setCurrentImageData(dataUrl);
-    // Pre-fill artist name here too just in case
-    if (currentUser.name && currentUser.name !== 'Artist') {
-        setArtistName(currentUser.name);
-    }
     setIsModalOpen(true);
     setIsAnalyzing(false);
   };
 
-  const confirmSave = () => {
-    if (!currentImageData || !artistName || !artTitle) {
-      alert("Please provide both a name and a title!");
+  const confirmSave = async () => {
+    if (!currentImageData || !artTitle) {
+      alert("Please provide both a title and image data!");
       return;
     }
 
-    const newPainting: Painting = {
-      id: Date.now().toString(),
-      dataUrl: currentImageData,
-      title: artTitle,
-      artist: artistName,
-      critique: artCritique || undefined,
-      votes: 0,
-      timestamp: Date.now()
-    };
+    setIsSaving(true);
+    const formData = new FormData();
+    formData.append('title', artTitle);
+    formData.append('critique', artCritique || '');
+    formData.append('file', currentImageData); // currentImageData is base64 string
 
-    savePaintingToStorage(newPainting);
-    setIsModalOpen(false);
-    setView('GALLERY');
+    try {
+      const response = await fetch('/api/save-doodle', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`Failed to save art: ${data.error}`);
+        console.error('API Save Error:', data.error);
+        return;
+      }
+
+      // Success: update local state with the new public URL
+      const newPainting: Painting = {
+        id: Date.now().toString(), // Use client-side ID for immediate display
+        dataUrl: data.image_url, // Use the public URL from Supabase
+        title: artTitle,
+        artist: currentUser.name,
+        critique: artCritique || undefined,
+        votes: 0,
+        timestamp: Date.now()
+      };
+
+      savePaintingToStorage(newPainting); // This updates local state and localStorage
+      
+      setIsModalOpen(false);
+      setView('GALLERY');
+    } catch (error) {
+      alert("An unexpected error occurred while saving your art.");
+      console.error("Client-side save error:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleVote = (id: string) => {
@@ -160,13 +179,13 @@ export default function UserHome() {
             <div>
                 <h2 className="font-doodle text-2xl mb-4">🔥 Daily Challenge</h2>
                 <div className="bg-white border-2 border-black p-4 rotate-2 mb-4 shadow-sm">
-                    <p className="font-hand text-lg font-bold text-center">
-                    Draw a cat using only circles. 🐱
+                    <p className="font-hand text-lg font-bold text-center text-stone-500">
+                    Coming Soon! Check back later for creative prompts.
                     </p>
                 </div>
             </div>
-            <DoodleButton variant="secondary" onClick={() => setView('PAINT')} className="w-full justify-center mt-2">
-            Accept Challenge
+            <DoodleButton variant="secondary" disabled className="w-full justify-center mt-2 opacity-50 cursor-not-allowed">
+            Coming Soon
             </DoodleButton>
         </div>
 
@@ -288,15 +307,6 @@ export default function UserHome() {
                     placeholder="e.g. The Angry Line"
                 />
              </div>
-             
-             <div>
-                <label className="font-hand text-sm font-bold block mb-1">Artist Name</label>
-                <DoodleInput 
-                    value={artistName} 
-                    onChange={(e) => setArtistName(e.target.value)} 
-                    placeholder="e.g. Picasso Jr."
-                />
-             </div>
 
              {artCritique && (
                 <div className="bg-stone-100 p-3 rounded text-sm font-serif italic border-l-4 border-stone-400">
@@ -306,8 +316,8 @@ export default function UserHome() {
              )}
           </div>
 
-          <DoodleButton onClick={confirmSave} className="w-full mt-4 justify-center">
-            Hang in Museum
+          <DoodleButton onClick={confirmSave} disabled={isSaving} className="w-full mt-4 justify-center disabled:opacity-50">
+            {isSaving ? 'Saving...' : 'Hang in Museum'}
           </DoodleButton>
         </div>
       </Modal>
