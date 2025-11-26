@@ -1,31 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Painting, ViewMode, AICritiqueResponse } from './types';
+import { useRouter } from 'next/navigation';
+import { Painting, ViewMode, AICritiqueResponse, UserProfile, USER_PROFILE_KEY } from './types';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Gallery } from './components/Gallery';
 import { DoodleButton, DoodleInput, Modal } from './components/UI';
+import { SignupModal } from './components/SignupModal'; // New import
+import { LoginModal } from './components/LoginModal';
+import { HeroDoodles } from './components/HeroDoodles';
 import { analyzeDoodle } from './services/geminiService';
 import { Palette, GalleryVerticalEnd } from 'lucide-react';
 
 const STORAGE_KEY = 'doodle_museum_artworks';
 
 // Dummy initial data
-const INITIAL_PAINTINGS: Painting[] = [
-  {
-    id: '1',
-    dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', // 1x1 pixel placeholder logic handled in component usually, but keeping valid string
-    title: 'The Invisible Dot',
-    artist: 'Minimalist Mike',
-    votes: 5,
-    timestamp: Date.now(),
-    critique: "A bold statement on the futility of existence, or perhaps just a speck of dirt on the lens."
-  }
-];
 
 export default function App() {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>('HOME');
-  const [paintings, setPaintings] = useState<Painting[]>([]);
   
   // State for the "Save" modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,31 +26,25 @@ export default function App() {
   const [artistName, setArtistName] = useState('');
   const [artTitle, setArtTitle] = useState('');
   const [artCritique, setArtCritique] = useState('');
-  
+  const [userDescription, setUserDescription] = useState(''); // Added userDescription
+
   // AI State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // New state for signup modal
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
   // Load from local storage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setPaintings(JSON.parse(stored));
-    } else {
-        // Load initial dummy if empty
-        setPaintings(INITIAL_PAINTINGS); 
-    }
+    // No paintings loaded directly for the public page, Gallery will fetch its own.
   }, []);
-
-  const savePaintingToStorage = (newPainting: Painting) => {
-    const updated = [newPainting, ...paintings];
-    setPaintings(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
 
   const handleSaveRequest = (dataUrl: string) => {
     setCurrentImageData(dataUrl);
     setArtTitle('');
     setArtCritique('');
+    setUserDescription(''); // Reset description for new save
     setIsModalOpen(true);
   };
 
@@ -73,51 +60,79 @@ export default function App() {
 
   const confirmSave = () => {
     if (!currentImageData || !artistName || !artTitle) {
-      alert("Please provide both a name and a title!");
+      alert("Please provide Artist Name, Title, and image data!");
       return;
     }
 
+    // For public save, we'll just save to local storage as before, no Supabase yet
+    // In a real app, public users might be limited or prompted to sign up.
     const newPainting: Painting = {
       id: Date.now().toString(),
       dataUrl: currentImageData,
       title: artTitle,
       artist: artistName,
+      description: userDescription, // Include userDescription
       critique: artCritique || undefined,
       votes: 0,
       timestamp: Date.now()
     };
 
-    savePaintingToStorage(newPainting);
+    // Retrieve existing paintings or initialize empty array
+    const existingPaintings = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const updatedPaintings = [newPainting, ...existingPaintings];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedPaintings));
+
     setIsModalOpen(false);
     setView('GALLERY');
   };
 
-  const handleVote = (id: string) => {
-    const updated = paintings.map(p => 
-      p.id === id ? { ...p, votes: p.votes + 1 } : p
-    );
-    // Sort by votes (descending) whenever a vote happens
-    updated.sort((a, b) => b.votes - a.votes);
-    
-    setPaintings(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  // New function for signup success
+  const handleSignupSuccess = (email: string, artistName: string) => {
+    console.log(`User ${email} signed up successfully (simulated) as ${artistName}.`);
+    const newProfile: UserProfile = {
+      name: artistName,
+      avatarUrl: null,
+      bio: 'Just started doodling!',
+      joinedDate: Date.now(),
+    };
+    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(newProfile));
+    setIsSignupModalOpen(false); // Close signup modal
+    router.push('/home');
+  };
+
+  const handleLoginSuccess = (email: string) => {
+    console.log(`User ${email} logged in successfully (simulated).`);
+    setIsLoginModalOpen(false);
+    // On login, we don't get artistName from modal, assume profile will be loaded from localStorage on /home
+    router.push('/home');
+  };
+
+  const openLoginFromSignup = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  const openSignupFromLogin = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
   };
 
   // --- Views ---
 
   const renderHome = () => (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center gap-8 animate-fade-in p-4">
-      <h1 className="font-doodle text-5xl md:text-7xl mb-4 relative inline-block">
+    <div className="relative flex flex-col items-center justify-center min-h-[80vh] text-center gap-8 animate-fade-in p-4 overflow-hidden">
+      <HeroDoodles />
+      <h1 className="font-doodle text-5xl md:text-7xl mb-4 relative inline-block z-10">
         Doodle Museum
         <span className="absolute -top-6 -right-6 text-4xl rotate-12">✏️</span>
       </h1>
-      <p className="font-hand text-xl md:text-2xl max-w-lg text-stone-600">
+      <p className="font-hand text-xl md:text-2xl max-w-lg text-stone-600 z-10">
         Welcome to the most prestigious gallery of scribbles on the internet. 
         Paint a masterpiece, get roasted by our AI critic, and hang it on the wall.
       </p>
       
-      <div className="flex gap-6 mt-8">
-        <DoodleButton onClick={() => setView('PAINT')} className="text-xl px-8 py-4">
+      <div className="flex gap-6 mt-8 z-10">
+        <DoodleButton onClick={() => setIsSignupModalOpen(true)} className="text-xl px-8 py-4">
           Start Painting
         </DoodleButton>
         <DoodleButton variant="secondary" onClick={() => setView('GALLERY')} className="text-xl px-8 py-4">
@@ -173,8 +188,6 @@ export default function App() {
                 <p className="font-hand text-stone-500">Vote for your favorites!</p>
             </div>
             <Gallery 
-              paintings={paintings} 
-              onVote={handleVote} 
               onAddClick={() => setView('PAINT')}
             />
           </div>
@@ -211,6 +224,16 @@ export default function App() {
                 />
              </div>
 
+             <div>
+                <label className="font-hand text-sm font-bold block mb-1">Description (Optional)</label>
+                <textarea 
+                    value={userDescription} 
+                    onChange={(e) => setUserDescription(e.target.value)} 
+                    placeholder="Tell us about your masterpiece..."
+                    className="font-hand text-xl border-b-2 border-black bg-transparent focus:outline-none focus:border-stone-500 px-2 py-1 placeholder-stone-400 w-full resize-none h-20"
+                />
+             </div>
+
              {artCritique && (
                 <div className="bg-stone-100 p-3 rounded text-sm font-serif italic border-l-4 border-stone-400">
                     <span className="font-bold not-italic text-xs block text-stone-500 mb-1">Museum Curator's Note:</span>
@@ -224,6 +247,22 @@ export default function App() {
           </DoodleButton>
         </div>
       </Modal>
+
+      {/* Signup Modal */}
+      <SignupModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)} 
+        onSignupSuccess={handleSignupSuccess}
+        onLoginClick={openLoginFromSignup}
+      />
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onSignupClick={openSignupFromLogin}
+      />
 
     </div>
   );

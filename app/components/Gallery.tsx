@@ -1,14 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Painting } from '../types';
 import { Heart, Plus } from 'lucide-react';
 
 interface GalleryProps {
-  paintings: Painting[];
-  onVote: (id: string) => void;
   onAddClick: () => void;
 }
 
-const Frame: React.FC<{ painting: Painting; onVote: (id: string) => void }> = ({ painting, onVote }) => {
+const Frame: React.FC<{ painting: Painting }> = ({ painting }) => {
   return (
     <div className="flex flex-col items-center group">
       {/* The Frame */}
@@ -29,8 +27,8 @@ const Frame: React.FC<{ painting: Painting; onVote: (id: string) => void }> = ({
       <div className="mt-8 text-center w-full max-w-[160px]">
         <div className="flex justify-center items-center gap-2 mb-1">
           <button 
-            onClick={() => onVote(painting.id)}
-            className="text-red-400 hover:text-red-600 transition-colors active:scale-90"
+            disabled // Disable for now
+            className="text-red-400 opacity-50 cursor-not-allowed"
           >
             <Heart className={painting.votes > 0 ? "fill-current" : ""} size={16} />
           </button>
@@ -57,7 +55,36 @@ const EmptyFrame: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   );
 };
 
-export const Gallery: React.FC<GalleryProps> = ({ paintings, onVote, onAddClick }) => {
+export const Gallery: React.FC<GalleryProps> = ({ onAddClick }) => {
+  const [paintings, setPaintings] = useState<Painting[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPaintings = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/get-all-paintings');
+        if (response.ok) {
+          const data = await response.json();
+          setPaintings(data.paintings);
+        } else {
+          console.error("Failed to fetch paintings:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching paintings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPaintings();
+  }, []);
+
+  if (loading) {
+    return (
+        <div className="text-center font-hand text-stone-500 text-lg py-10">Loading masterpieces...</div>
+    );
+  }
+
   // We want to show paintings, plus a bunch of empty slots to make it look like a big museum wall
   const emptySlotsCount = Math.max(0, 11 - paintings.length); // Ensure at least a grid of 12 roughly
   const emptySlots = Array(emptySlotsCount).fill(null);
@@ -68,7 +95,7 @@ export const Gallery: React.FC<GalleryProps> = ({ paintings, onVote, onAddClick 
         
         {/* Render actual paintings */}
         {paintings.map((painting) => (
-          <Frame key={painting.id} painting={painting} onVote={onVote} />
+          <Frame key={painting.id} painting={painting} />
         ))}
 
         {/* The "Add New" button as the first empty slot */}
